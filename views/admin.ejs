@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quiz Admin</title>
+
+<!-- Live refresh is handled in JS below (only once unlocked), so it
+     doesn't wipe out the password field before you can type it. -->
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 40px 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 32px;
+    max-width: 700px;
+    width: 100%;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  h1 { margin-top: 0; font-size: 24px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eee; }
+  th { font-size: 13px; text-transform: uppercase; color: #888; }
+  .status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+  .status.finished { background: #dcfce7; color: #166534; }
+  .status.progress { background: #fef9c3; color: #854d0e; }
+  .empty { color: #888; padding: 20px 0; }
+
+  /* --- password gate --- */
+  #gate {
+    position: fixed;
+    inset: 0;
+    background: #f4f6f8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+  #gate .box {
+    background: #fff;
+    border-radius: 10px;
+    padding: 28px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    width: 280px;
+    text-align: center;
+  }
+  #gate input {
+    width: 100%;
+    padding: 8px 10px;
+    margin: 12px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  #gate button {
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #gate .err { color: #b91c1c; font-size: 12px; height: 16px; }
+  #content { display: none; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1 style="font-size:18px;">Enter Password</h1>
+    <input type="password" id="pw" placeholder="Password" autofocus>
+    <div class="err" id="pwErr"></div>
+    <button onclick="checkPw()">Unlock</button>
+  </div>
+</div>
+
+<div id="content">
+<div class="card">
+  <h1>Live Quiz Standings</h1>
+  <div class="sub">Auto-refreshes every 3 seconds &middot; Max possible score: <%= maxScore %></div>
+
+  <% if (players.length === 0) { %>
+    <div class="empty">No players yet.</div>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Score</th>
+          <th>Progress</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% players.forEach(function(p, i) { %>
+          <tr>
+            <td><%= i + 1 %></td>
+            <td><%= p.name %></td>
+            <td><%= p.score %> / <%= maxScore %></td>
+            <td><%= Math.min(p.currentIndex, totalQuestions) %> / <%= totalQuestions %></td>
+            <td>
+              <% if (p.finished) { %>
+                <span class="status finished">Finished</span>
+              <% } else { %>
+                <span class="status progress">In progress</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+</div>
+
+<script>
+  var PASSWORD = "224466";
+
+  function checkPw() {
+    var val = document.getElementById('pw').value;
+    if (val === PASSWORD) {
+      sessionStorage.setItem('quizAdminUnlocked', '1');
+      unlock();
+    } else {
+      document.getElementById('pwErr').textContent = 'Wrong password';
+    }
+  }
+
+  function unlock() {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    setTimeout(function() { location.reload(); }, 3000);
+  }
+
+  document.getElementById('pw').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') checkPw();
+  });
+
+  if (sessionStorage.getItem('quizAdminUnlocked') === '1') {
+    unlock();
+  }
+</script>
+
+</body>
+</html>

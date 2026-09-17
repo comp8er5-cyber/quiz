@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quiz</title>
+<style>
+  :root {
+    --navy: #1B2A4A;
+    --navy-soft: #2B3D63;
+    --maroon: #B3245C;
+    --bg: #FAF9F6;
+    --card-bg: #FFFFFF;
+    --border: #E6E2D9;
+    --muted: #7A7A7A;
+
+    --orange-bg: #FCE4C8; --orange-text: #B4611E;
+    --green-bg:  #DCEEE4; --green-text:  #1F7A5C;
+    --pink-bg:   #FBDCE6; --pink-text:   #B3245C;
+    --blue-bg:   #D9E6F7; --blue-text:   #24406B;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 40px 16px;
+    display: flex;
+    justify-content: center;
+    color: var(--navy);
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 36px;
+    max-width: 560px;
+    width: 100%;
+    box-shadow: 0 4px 18px rgba(27, 42, 74, 0.07);
+  }
+  h1 {
+    margin-top: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 26px;
+    color: var(--navy);
+    letter-spacing: 0.2px;
+  }
+  h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 20px;
+    color: var(--navy);
+  }
+  p { color: var(--navy-soft); }
+  .progress {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--maroon);
+    margin-bottom: 18px;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 11px 12px;
+    font-size: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    background: #fff;
+    color: var(--navy);
+  }
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--navy);
+  }
+  button, .submit-btn {
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    padding: 11px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  button:hover, .submit-btn:hover { background: var(--maroon); }
+
+  /* ---- matching question ---- */
+  .match-container { display: flex; gap: 24px; margin-bottom: 20px; }
+  .col { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .match-btn {
+    padding: 11px;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: var(--navy);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+.match-btn.selected { border-color: var(--navy); background: var(--blue-bg); }
+.match-btn.matched  { border-color: #1d4ed8; background: #dbeafe; color: #1d4ed8; cursor: default; opacity: 0.9; }
+  
+  /* ---- flag / oddone options ---- */
+  .options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .option-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--navy);
+    background: #fff;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .option-btn:has(input:checked) { border-color: var(--navy); background: var(--blue-bg); }
+
+  /* soft rotating accent so the list echoes the four-color palette,
+     without being loud — only a left edge tint until chosen */
+  .option-btn:nth-of-type(4n+1) { border-left: 4px solid var(--orange-bg); }
+  .option-btn:nth-of-type(4n+2) { border-left: 4px solid var(--green-bg); }
+  .option-btn:nth-of-type(4n+3) { border-left: 4px solid var(--pink-bg); }
+  .option-btn:nth-of-type(4n+4) { border-left: 4px solid var(--blue-bg); }
+  .option-btn:has(input:checked) { border-left-color: var(--navy); }
+
+  .flag { font-size: 22px; }
+
+  .word-highlight {
+    font-size: 20px;
+    margin-bottom: 20px;
+    color: var(--navy-soft);
+  }
+  .word-highlight strong { color: var(--maroon); }
+
+  .score-line {
+    font-size: 20px;
+    margin: 16px 0;
+    color: var(--navy-soft);
+  }
+  .score-line strong { color: var(--maroon); }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <% if (stage === 'name') { %>
+
+    <h1>Welcome to the Quiz!</h1>
+    <p>Enter your name to begin.</p>
+    <form method="POST" action="/start">
+      <input type="text" name="name" placeholder="Your name" required autofocus>
+      <button type="submit">Start Quiz</button>
+    </form>
+
+  <% } else if (stage === 'question') { %>
+
+    <div class="progress">Question <%= index + 1 %> of <%= total %> — Score so far: <%= player.score %></div>
+
+    <% if (question.type === 'matching') { %>
+
+      <h2><%= question.question %></h2>
+      <form method="POST" action="/answer" id="matchForm">
+        <div class="match-container">
+          <div class="col" id="leftCol">
+            <% question.pairs.forEach(function(p) { %>
+              <button type="button" class="match-btn left-btn" data-value="<%= p.left %>"><%= p.left %></button>
+            <% }); %>
+          </div>
+          <div class="col" id="rightCol">
+            <% rightShuffled.forEach(function(r) { %>
+              <button type="button" class="match-btn right-btn" data-value="<%= r %>"><%= r %></button>
+            <% }); %>
+          </div>
+        </div>
+        <div id="hiddenInputs"></div>
+        <p style="font-size:13px;color:var(--muted);">Click one item on the left, then its match on the right. You can submit even if some are left unmatched.</p>
+        <button type="submit" class="submit-btn">Հաջորդը</button>
+      </form>
+
+      <script>
+        (function () {
+          let selectedLeft = null;
+          const leftBtns = document.querySelectorAll('.left-btn');
+          const rightBtns = document.querySelectorAll('.right-btn');
+          const hiddenContainer = document.getElementById('hiddenInputs');
+
+          leftBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              if (btn.classList.contains('matched')) return;
+              leftBtns.forEach(function (b) { b.classList.remove('selected'); });
+              btn.classList.add('selected');
+              selectedLeft = btn;
+            });
+          });
+
+          rightBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              if (btn.classList.contains('matched') || !selectedLeft) return;
+
+              const leftVal = selectedLeft.dataset.value;
+              const rightVal = btn.dataset.value;
+
+              selectedLeft.classList.add('matched');
+              selectedLeft.classList.remove('selected');
+              btn.classList.add('matched');
+
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = 'pairs[]';
+              input.value = leftVal + '::' + rightVal;
+              hiddenContainer.appendChild(input);
+
+              selectedLeft = null;
+            });
+          });
+        })();
+      </script>
+
+    <% } else if (question.type === 'flag') { %>
+
+      <div class="word-highlight">Ո՞ր երկրից է փոխառված <strong><%= question.word %></strong> բառը։</div>
+      <form method="POST" action="/answer">
+        <div class="options">
+          <% question.options.forEach(function(opt, i) { %>
+            <label class="option-btn">
+              <input type="radio" name="answer" value="<%= opt.country %>" required>
+              <span class="flag"><%= opt.flag %></span> <%= opt.country %>
+            </label>
+          <% }); %>
+        </div>
+        <button type="submit" class="submit-btn">Հաջորդը</button>
+      </form>
+
+    <% } else if (question.type === 'oddone') { %>
+
+      <h2>Ո՞ր բառը փոխառություն չէ:</h2>
+      <form method="POST" action="/answer">
+        <div class="options">
+          <% question.words.forEach(function(w) { %>
+            <label class="option-btn">
+              <input type="radio" name="answer" value="<%= w %>" required>
+              <%= w %>
+            </label>
+          <% }); %>
+        </div>
+        <button type="submit" class="submit-btn">Հաջորդը</button>
+      </form>
+
+    <% } %>
+
+  <% } else if (stage === 'done') { %>
+
+    <h1>Thank you, <%= player.name %>!</h1>
+    <div class="score-line">You scored <strong><%= player.score %></strong> out of <strong><%= maxScore %></strong>.</div>
+
+  <% } %>
+
+</div>
+</body>
+</html>
